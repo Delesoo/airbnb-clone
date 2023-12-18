@@ -41,6 +41,22 @@ export default function PlacesPage() {
         });
         setPhotoLink('');
     }
+    function uploadPhoto(ev) {
+        const files = ev.target.files;
+        const data = new FormData();
+        for (let i = 0; i < files.length; i++) {
+         data.append('photos', files[i]); 
+        }
+        axios.post('/upload', data, {
+          headers: {'Content-type':'multipart/form-data'}  
+        }).then(response => {
+            const {data:filenames} = response;
+            setAddedPhotos(prev => {
+                return [...prev, ...filenames];
+            });
+        })
+
+    }
     return (
         <div>
             {action !== 'new' && (
@@ -73,11 +89,13 @@ export default function PlacesPage() {
                                <img className='rounded-2xl' src={"http://localhost:4000/uploads/"+link} alt="" />
                             </div> 
                         ))}
-                        <button className="flex items-center justify-center gap-1 border bg-transparent rounded-2xl p-2 text-2xl text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                        <label className="cursor-pointer flex items-center justify-center gap-1 border bg-transparent rounded-2xl p-2 text-2xl text-gray-500">
+                        <input type="file" multiple className="hidden" onChange={uploadPhoto} />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
 </svg>
     Upload
-</button>
+</label>
                     </div>
                     {preInput('Description', 'Description of the place')}
                     <textarea value={description} onChange={ev => setDescription(ev.target.value)} />
