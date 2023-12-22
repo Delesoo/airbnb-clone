@@ -7,7 +7,6 @@ export default function AccountNav() {
     subpage = 'profile';
    }
     function linkClasses (type=null) {     
-        const isActive = pathname === '/account' && type === 'profile';
         let classes = 'inline-flex gap-1 py-2 px-6 rounded-full';
         if(type === subpage) {
             classes +=' bg-primary text-white';
