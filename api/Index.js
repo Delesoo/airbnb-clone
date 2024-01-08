@@ -10,11 +10,14 @@ const Booking = require('./models/Booking.js');
 const User = require('./models/User.js');
 require('dotenv').config()
 const app = express();
+const {S3Client, PutObjectCommand} = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const fs = require('fs');
+const mime = require('mime-types');
 
 const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = 'dagagsgsgewqhnss';
+const bucket = 'deles-booking-app';
 
 app.use(express.json());
 app.use(cookieParser());
@@ -25,6 +28,27 @@ app.use(cors({
 }));
 
 mongoose.connect(process.env.MONGO_URL);
+
+async function uploadToS3(path, originalFilename, mimetype) {
+    const client = new S3Client({
+        region: 'us-east-1',
+        credentials: {
+            accessKeyId: process.env.S3_ACCESS_KEY,
+            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        },
+    });
+    const parts = originalFilename.split('.');
+    const ext = parts[parts.length - 1];
+    const newFilename = Date.now() + '.' + ext;
+    await client.send(new PutObjectCommand({
+        Bucket: bucket,
+        Body: fs.readFileSync(path),
+        Key: newFilename,
+        ContentType: mimetype,
+        ACL: 'public-read',
+    }));
+    console.log({data});
+}
 
 function getUserDataFromReq(req) {
     return new Promise((resolve, reject) => {
@@ -103,21 +127,12 @@ app.post('/upload-by-link', async (req,res) => {
     res.json(newName);
 })
 
-const photosMiddleware = multer({dest:'uploads/'});
-app.post('/upload', photosMiddleware.array('photos', 100), (req,res) => {
+const photosMiddleware = multer({dest: '/tmp'});
+app.post('/upload', photosMiddleware.array('photos', 100), async (req,res) => {
     const uploadedFiles = [];
     for (let i = 0; i < req.files.length; i++) {
-        const {path, originalname} = req.files[i];
-        const parts = originalname.split('.');
-        const ext = parts[parts.length - 1];
-        const newName = 'photo' + Date.now() + '.' + ext;
-        const newPath = __dirname + '/uploads/' + newName;
-
-        fs.renameSync(path, newPath);
-        uploadedFiles.push(newName);
-        // const newPath = path + '.' + ext;
-        // fs.renameSync(path,newPath);
-        // uploadedFiles.push(newPath.replace("uploads/", ""));
+        const {path, originalname, mimetype} = req.files[i];
+        await uploadToS3(path, originalname, mimetype);
     }
     res.json(uploadedFiles);
 });
